@@ -40,6 +40,14 @@ LOG_INFO_RANK0 "=== Loading Primus Environment Configuration ==="
 # is no longer shipped); fall back to rocm-smi for older images. amd-smi reports
 # the model as "MARKET_NAME: AMD Instinct MI355X".
 detect_gpu_model() {
+    # shellcheck source=runner/lib/gpu.sh
+    source "${SCRIPT_DIR}/../../lib/gpu.sh"
+    local platform
+    platform=$(detect_gpu_platform) || return 1
+    if [[ "$platform" == cuda ]]; then
+        echo cuda
+        return 0
+    fi
     local gpu_model
     gpu_model="unknown"
 
@@ -53,7 +61,7 @@ detect_gpu_model() {
             product_name=$(rocm-smi --showproductname 2>/dev/null | grep -oP 'MI\d+[A-Z]*' | head -n1)
         fi
     else
-        echo "Error: neither amd-smi nor rocm-smi found. Is ROCm installed?" >&2
+        echo "Error: no supported GPU management tool found" >&2
         echo "unknown"
         return 0
     fi

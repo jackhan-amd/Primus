@@ -45,6 +45,10 @@ class PrimusConfig(object):
         return self._exp.platform
 
     @property
+    def target_gpu(self) -> str:
+        return getattr(self._exp, "target_gpu", "auto")
+
+    @property
     def num_modules(self) -> int:
         return len(self.module_keys)
 

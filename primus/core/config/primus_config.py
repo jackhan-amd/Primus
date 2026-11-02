@@ -119,6 +119,7 @@ def load_primus_config(config_path: Path, cli_args: Any | None = None) -> Simple
     cfg.platform_config = platform_config
     # Also keep `platform` for compatibility with helpers that expect it.
     cfg.platform = platform_config
+    cfg.target_gpu = getattr(legacy_cfg, "target_gpu", "auto")
 
     # Build modules list from legacy PrimusConfig.module_keys/get_module_config.
     #

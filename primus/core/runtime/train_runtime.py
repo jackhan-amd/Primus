@@ -433,6 +433,11 @@ class PrimusRuntime:
         # Prepare backend environment
         adapter.prepare_backend(module_config)
 
+        from primus.core.utils.gpu import configure_gpu_params
+
+        if self.ctx.framework in ("megatron", "torchtitan"):
+            configure_gpu_params(module_config.params, getattr(self.ctx.primus_config, "target_gpu", "auto"))
+
         # Build backend args from Primus params
         backend_args = adapter.convert_config(module_config.params)
         self.ctx.backend_args = backend_args

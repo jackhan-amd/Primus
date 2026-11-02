@@ -15,6 +15,8 @@ The original logic lives inside ``TorchTitanPretrainTrainer``. It is now also
 expressed as a backend patch so it can be managed via the Primus patch system.
 """
 
+import importlib.util
+
 from primus.core.patches import PatchContext, get_param, register_patch
 from primus.core.utils.module_utils import log_rank_0
 
@@ -25,7 +27,8 @@ from primus.core.utils.module_utils import log_rank_0
     phase="setup",
     description="Use Primus-Turbo Attention kernels for supported models",
     condition=lambda ctx: (
-        get_param(ctx, "primus_turbo.enable_primus_turbo", False)
+        importlib.util.find_spec("primus_turbo") is not None
+        and get_param(ctx, "primus_turbo.enable_primus_turbo", False)
         and get_param(ctx, "primus_turbo.use_turbo_attention", False)
     ),
 )
@@ -41,36 +44,28 @@ def patch_turbo_attention(ctx: PatchContext) -> None:
     # ******* LLaMA3 Attention Model *******
     import torchtitan.models.llama3.model.model
 
-    from primus.backends.torchtitan.models.llama3.model.model import (
-        Attention as Llama3Attention,
-    )
+    from primus.backends.torchtitan.models.llama3.model.model import Attention as Llama3Attention
 
     torchtitan.models.llama3.model.model.Attention = Llama3Attention
 
     # ******* LLaMA4 Attention Model *******
     import torchtitan.models.llama4.model.model
 
-    from primus.backends.torchtitan.models.llama4.model.model import (
-        Attention as Llama4Attention,
-    )
+    from primus.backends.torchtitan.models.llama4.model.model import Attention as Llama4Attention
 
     torchtitan.models.llama4.model.model.Attention = Llama4Attention
 
     # ******* DeepSeek-V3 Attention Model *******
     import torchtitan.models.deepseek_v3.model.model
 
-    from primus.backends.torchtitan.models.deepseek_v3.model.model import (
-        Attention as DeepSeekV3Attention,
-    )
+    from primus.backends.torchtitan.models.deepseek_v3.model.model import Attention as DeepSeekV3Attention
 
     torchtitan.models.deepseek_v3.model.model.Attention = DeepSeekV3Attention
 
     # ******* Qwen3 Attention Model *******
     import torchtitan.models.qwen3.model.model
 
-    from primus.backends.torchtitan.models.qwen3.model.model import (
-        Attention as Qwen3Attention,
-    )
+    from primus.backends.torchtitan.models.qwen3.model.model import Attention as Qwen3Attention
 
     torchtitan.models.qwen3.model.model.Attention = Qwen3Attention
 

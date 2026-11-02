@@ -17,6 +17,7 @@ configuration representations used in TorchTitan integration:
 from __future__ import annotations
 
 import importlib
+import importlib.util
 from types import SimpleNamespace
 from typing import Any
 
@@ -44,6 +45,9 @@ def build_job_config_from_namespace(ns: SimpleNamespace) -> Any:
 
     # Step 1: Convert namespace to dict
     cfg_dict = namespace_to_dict(ns)
+    if importlib.util.find_spec("primus_turbo") is None:
+        model = cfg_dict.get("model", {})
+        model["converters"] = [c for c in model.get("converters", []) if c != "primus_turbo"]
 
     # Step 2: Extract and preserve Primus-specific configuration
     primus_config = cfg_dict.pop("primus", None)

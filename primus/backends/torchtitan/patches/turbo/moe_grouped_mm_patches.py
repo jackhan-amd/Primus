@@ -19,6 +19,8 @@ Behavior:
       delegate to Primus' grouped_mm implementation with ``use_fp8`` bound.
 """
 
+import importlib.util
+
 from primus.core.patches import PatchContext, get_param, register_patch
 from primus.core.utils.module_utils import log_rank_0
 
@@ -33,7 +35,8 @@ _ALREADY_PATCHED_SENTINEL = "_run_experts_grouped_mm_dynamic"
     phase="setup",
     description="Use Primus-Turbo grouped_mm for TorchTitan MoE experts",
     condition=lambda ctx: (
-        get_param(ctx, "primus_turbo.enable_primus_turbo", False)
+        importlib.util.find_spec("primus_turbo") is not None
+        and get_param(ctx, "primus_turbo.enable_primus_turbo", False)
         and get_param(ctx, "primus_turbo.use_turbo_grouped_gemm", False)
     ),
 )

@@ -194,6 +194,10 @@ extract_config_section "container" container_config || {
     exit 1
 }
 
+# shellcheck source=runner/lib/gpu.sh
+source "$RUNNER_DIR/lib/gpu.sh"
+configure_container_gpu container_config || exit 1
+
 ###############################################################################
 # STEP 3: Process configuration from file
 # Note: container_config already loaded in STEP 2, we just check debug/dry-run here
@@ -289,6 +293,9 @@ validate_positional_args \
     POSITIONAL_ARGS \
     "[container] Missing Primus commands after '--'. Usage: primus-cli container [options] -- <primus-commands>"
 
+if [[ -n "${container_config[options.gpus]:-}" ]]; then
+    LOG_INFO_RANK0 "[container] CUDA GPU access configured via --gpus"
+else
 validate_device_paths \
     "${container_config[options.device]:-}" \
     "[container]" \
@@ -300,6 +307,7 @@ validate_device_paths \
         - \"/dev/dri\"
         - \"/dev/infiniband\"" \
     "[container] Device validation failed. Ensure ROCm drivers are installed on host. Check: ls -la /dev/kfd /dev/dri /dev/infiniband"
+fi
 
 # Validate parameter formats (if specified)
 validate_memory_format \
@@ -431,6 +439,10 @@ for key in "${!container_config[@]}"; do
             # Cumulative: use all values
             while IFS= read -r val; do
                 [[ -n "$val" ]] || continue
+                if [[ -n "${container_config[options.gpus]:-}" && "$opt_name" == "device" ]]; then
+                    [[ "$val" == "/dev/kfd" || "$val" == "/dev/dri" ]] && continue
+                    [[ "$val" == "/dev/infiniband" && ! -e "$val" ]] && continue
+                fi
                 CONTAINER_OPTS+=("--${opt_name}" "$val")
                 LOG_INFO_RANK0 "[container] Added cumulative: --${opt_name} $val"
             done <<< "$opt_value"
@@ -446,6 +458,10 @@ for key in "${!container_config[@]}"; do
         LOG_INFO_RANK0 "[container] Added boolean flag: --${opt_name}"
     else
         # Single value option
+        if [[ -n "${container_config[options.gpus]:-}" && "$opt_name" == "device" ]]; then
+            [[ "$opt_value" == "/dev/kfd" || "$opt_value" == "/dev/dri" ]] && continue
+            [[ "$opt_value" == "/dev/infiniband" && ! -e "$opt_value" ]] && continue
+        fi
         CONTAINER_OPTS+=("--${opt_name}" "$opt_value")
         LOG_INFO_RANK0 "[container] Added option: --${opt_name} $opt_value"
     fi

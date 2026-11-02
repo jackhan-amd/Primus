@@ -23,13 +23,16 @@ only applies to ``gpt_oss`` runs, so existing GPT-OSS FlexAttention configs
 (turbo off) are unaffected.
 """
 
+import importlib.util
+
 from primus.core.patches import PatchContext, get_param, register_patch
 from primus.core.utils.module_utils import log_rank_0
 
 
 def _gptoss_turbo_enabled(ctx: PatchContext) -> bool:
     return (
-        get_param(ctx, "model.name", None) == "gpt_oss"
+        importlib.util.find_spec("primus_turbo") is not None
+        and get_param(ctx, "model.name", None) == "gpt_oss"
         and get_param(ctx, "primus_turbo.enable_primus_turbo", False)
         and get_param(ctx, "primus_turbo.use_turbo_attention", False)
     )
@@ -51,12 +54,8 @@ def patch_gptoss_sink_attention(ctx: PatchContext) -> None:
 
     import torchtitan.models.gpt_oss.model.model as gptoss_model_mod
 
-    from primus.backends.torchtitan.models.gpt_oss.model.model import (
-        Attention as GptOssTurboAttention,
-    )
-    from primus.backends.torchtitan.models.gpt_oss.model.model import (
-        TransformerBlock as GptOssTurboBlock,
-    )
+    from primus.backends.torchtitan.models.gpt_oss.model.model import Attention as GptOssTurboAttention
+    from primus.backends.torchtitan.models.gpt_oss.model.model import TransformerBlock as GptOssTurboBlock
 
     # Replace the module-level classes so GptOssModel builds the mirror instances
     # (the mirror TransformerBlock also constructs the mirror Attention, and both

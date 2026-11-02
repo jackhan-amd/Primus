@@ -14,6 +14,7 @@ Registration order matters: the base wrapper is registered first so that
 import inspect
 
 from primus.core.patches import PatchContext, get_args, register_patch
+from primus.core.utils.gpu import is_rocm_target
 from primus.core.utils.module_utils import log_rank_0
 
 # ---------------------------------------------------------------------------
@@ -43,7 +44,8 @@ def patch_validate_args(ctx: PatchContext):
     def patched_validate_args(*args, **kwargs):
         megatron_args._primus_original_validate_args(*args, **kwargs)
         validated_args = args[0] if args else kwargs.get("args", None)
-        validate_args_on_rocm(validated_args)
+        if is_rocm_target(getattr(validated_args, "target_gpu", "auto")):
+            validate_args_on_rocm(validated_args)
         return validated_args
 
     megatron_args.validate_args = patched_validate_args
@@ -112,7 +114,8 @@ def patch_validate_args_pipeline_split(ctx: PatchContext):
     backend="megatron",
     phase="before_train",
     description="Suppress TE version check for FP4 in validate_args on ROCm",
-    condition=lambda ctx: getattr(get_args(ctx), "fp4", False),
+    condition=lambda ctx: is_rocm_target(getattr(get_args(ctx), "target_gpu", "auto"))
+    and getattr(get_args(ctx), "fp4", False),
 )
 def patch_validate_args_fp4(ctx: PatchContext):
     """
@@ -150,7 +153,8 @@ def _te_cross_entropy_has_fp32_grad() -> bool:
     backend="megatron",
     phase="before_train",
     description="Keep TE cross-entropy fusion without TE's FP32-gradient fix, as on the pinned Megatron",
-    condition=lambda ctx: getattr(get_args(ctx), "cross_entropy_loss_fusion", False)
+    condition=lambda ctx: is_rocm_target(getattr(get_args(ctx), "target_gpu", "auto"))
+    and getattr(get_args(ctx), "cross_entropy_loss_fusion", False)
     and getattr(get_args(ctx), "cross_entropy_fusion_impl", None) == "te",
 )
 def patch_validate_args_te_cross_entropy(ctx: PatchContext):
